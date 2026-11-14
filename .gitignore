@@ -1,0 +1,6 @@
+bin/
+*.log
+*.err
+*.bak
+*.obj
+*.map

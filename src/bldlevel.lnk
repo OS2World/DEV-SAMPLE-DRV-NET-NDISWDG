@@ -1,0 +1,4 @@
+# bldlevel.lnk - BLDLEVEL signature of the module (read it with: bldlevel bin\wedge.os2)
+# Format: @#vendor:version#@##1## build date  build machine::language:buildlevel:fixpack::0::@@description
+# Version must match MAJOR_VERSION/MINOR*_VERSION in BUILD.CFG (1.06).
+option description '@#OS2World:1.06#@##1## 13 Nov 2026 00:00:00     ArcaOS-Dev::::0::@@DWB Generic Model NDIS Wedge driver (Open Watcom build)'

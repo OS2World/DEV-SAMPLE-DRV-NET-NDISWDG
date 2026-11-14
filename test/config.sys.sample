@@ -1,0 +1,5 @@
+REM CONFIG.SYS excerpt: NDISWDG.OS2 must be loaded AFTER PROTMAN.OS2 (and after the MAC it wraps).
+REM Options: /V verbose, /Q no messages, /W wait for a key, /AA beep when loaded.
+DEVICE=C:\IBMCOM\PROTMAN.OS2 /I:C:\IBMCOM
+DEVICE=C:\IBMCOM\MACS\MYMAC.OS2
+DEVICE=C:\IBMCOM\MACS\NDISWDG.OS2 /V

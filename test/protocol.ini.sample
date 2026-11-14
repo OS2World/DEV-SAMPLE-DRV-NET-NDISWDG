@@ -1,0 +1,14 @@
+; PROTOCOL.INI excerpt: put NDISWDG between the protocol stack and a MAC.
+; Before:  [TCPIP_NIF]  Bindings = MYMAC_NIF
+; After:   the protocol binds to the wedge, the wedge binds to the MAC.
+
+[MYMAC_NIF]
+   DriverName = MYMAC$
+
+[WEDGE_NIF]
+   DriverName = NDISWDG$
+   Bindings = MYMAC_NIF
+
+[TCPIP_NIF]
+   DriverName = TCPIP$
+   Bindings = WEDGE_NIF

@@ -1,78 +1,113 @@
-# DEV-SAMPLE-DRV-NET-wedge
+# NDISWDG - NDIS 2.0.1 pass-through ("wedge") module for OS/2 and ArcaOS
 
-**Version 1.06**
+**Version 2.00**
 
-DWB Associates Generic Model NDIS "Wedge" driver (sample). It sits between an NDIS protocol
-stack and a MAC driver and is used as a driver example. Updated to build with Open Watcom 2
-on ArcaOS / OS/2 Warp 4.52.
+NDISWDG is a small NDIS 2.0.1 "MAC-layer entity". It binds below to a real MAC driver and
+presents the same MAC interface above to a protocol (for example TCP/IP). Everything that
+crosses it is passed on unchanged, so the protocol and the MAC behave as if they were bound
+directly. It is a starting point for NDIS filters, monitors and test tools, and a working,
+documented example of the NDIS module interface (registration, binding, request, transmit and
+receive paths).
+
+This is a new, original implementation written from the public NDIS 2.0.1 specification.
+It replaces the earlier assembler "wedge" sample, which came from a vendor DDK and could not
+be published as open source. See `doc\PROVENANCE.md`.
 
 ## Status
-**Builds** with the Open Watcom 2 tools (`bin\wedge.os2`, a 16-bit NE protected-mode module).
-**Not run-tested**: it needs an NDIS MAC driver and a configuration (PROTOCOL.INI) to load,
-and no original binary or MASM was available to compare the result byte by byte.
-See `doc\CHANGES.md` for every change from the original source and the open points.
+* Builds clean with Open Watcom 2 (`bin\ndiswdg.os2`, a 16-bit NE device driver, about 5 KB, and the status tool `bin\wdgstat.exe`).
+* **Works on the ArcaOS Dev VM:** loads, registers, binds to the NIC driver and passes TCP/IP traffic
+  (an ssh session ran through it). See "Tested on" and `doc\DESIGN.md`.
 
 ## Tested on
-* Build: ArcaOS Dev VM (VirtualBox), Open Watcom 2.0 (wasm 2.0.1, wlink, wmake). 2026-11-13.
-* Run: not tested.
+* Build: ArcaOS Dev VM (VirtualBox), Open Watcom 2.0 (wcc, wasm, wlink, wmake), 2026-11-13.
+* Run: ArcaOS 5.1.1 Dev VM (VirtualBox, Intel PRO/1000 NIC driver MMLEM.OS2, TCP/IP): loaded without
+  errors, bound to the MAC, TCP/IP bound on top, transmit and receive indications counted (2026-11-13).
+  Not tested: ReceiveChain and TransferData paths (this NIC uses lookahead receive), other MACs, real hardware,
+  heavy load, SMP-specific races.
 
 ## License
-IBM DDK License Based
+BSD 3-Clause, see `LICENSE`.
 
 ## Authors
-* DWB Associates (original code, 1989-1991)
-* Open Watcom build update and version 1.06: Martin Iturbide (with Claude), 2026
+Martin Iturbide (with Claude), 2026.
 
 ## Original source
-https://github.com/OS2World/DEV-SAMPLE-DRV-wedge (version 1.05, dated 1992-01-22 in the history).
-The unmodified state is tagged `upstream-original`; the original MASM makefile and linker
-files are kept in `doc\original\`.
+New code. Interface knowledge comes only from the 3Com/Microsoft LAN Manager NDIS 2.0.1
+specification (chapters 3 to 6, appendix A).
 
 ## Version and BLDLEVEL
-Version 1.06 (original 1.05). The module carries a BLDLEVEL signature (`src\bldlevel.lnk`):
+Version 2.00 (see `src\version.h`). The module carries a BLDLEVEL signature (`src\bldlevel.lnk`):
 
-    bldlevel bin\wedge.os2
-    Vendor:        OS2World
-    Revision:      1.06
-    Description:   DWB Generic Model NDIS Wedge driver (Open Watcom build)
-
-The boot banner of the module (`src\smsgs.asm`) also prints "1.06". The version is set in
-`src\BUILD.CFG` (MINOR2_VERSION_STR / MINOR_VERSION) and must be kept in sync with
-`src\bldlevel.lnk`.
+    bldlevel bin\ndiswdg.os2
 
 ## Build tools
-* Open Watcom 2.0: `wasm` (MASM compatible assembler), `wlink`, `wmake`
-  (the plan prefers NASM; the sources are MASM syntax, so WASM was used - see `doc\CHANGES.md`)
-* `tee` (C:\usr\bin) for the log
+* Open Watcom 2.0: `wcc` (16-bit C), `wasm`, `wlink`, `wmake`
+* `tee` (C:\usr\bin) for the build log
 
 ## Build
 Run from the project root on ArcaOS:
 
-    compile_wat.cmd          build, writes compile.log, result bin\wedge.os2
+    compile_wat.cmd          build, writes compile.log, result bin\ndiswdg.os2
     compile_wat.cmd clean    remove bin\
 
 or directly: `wmake -f Makefile.wat`
 
-Link options (`Makefile.wat`): `system os2 dll`, `option protmode`, `option caseexact`,
-`option nodefaultlibs`, import library `C:\os2\doscalls.lib`, same object order as the old
-`WEDGEOS2.LNK`.
+Compile flags: small model, 286, no stack checks, `-zu` (SS is not DS in a device driver),
+packed structures, no C library. Link: `system os2 dll`, protected mode, CODE segment IOPL,
+DOSCALLS imports from `os2.lib`; `hdr.obj` is linked first (device header at offset 0 of the
+data) and `tail.obj` last (end-of-resident markers).
 
 ## Install
-Not verified (the module was not run). It is an NDIS module (`wedge.os2`), not a CONFIG.SYS
-`DEVICE=` driver: it would be copied to the NDIS drivers directory and declared in
-PROTOCOL.INI of the NDIS stack. For that reason the boot parameters of the driver standard
-(`/V /Q /W /AA`) do not apply.
+1. Copy `ndiswdg.os2` next to your MAC drivers (for example `C:\IBMCOM\MACS`).
+2. In CONFIG.SYS, load it **after** `PROTMAN.OS2` and after the MAC it wraps:
 
-## Parameters
-None. Configuration comes from the PROTOCOL.INI keywords handled in `src\sndiinit.asm`.
+       DEVICE=C:\IBMCOM\MACS\NDISWDG.OS2 /V
+
+3. In PROTOCOL.INI add a section for the wedge and bind the protocol to it instead of to the MAC
+   (see `test\protocol.ini.sample`):
+
+       [WEDGE_NIF]
+          DriverName = NDISWDG$
+          Bindings = MYMAC_NIF
+
+       [TCPIP_NIF]
+          Bindings = WEDGE_NIF
+
+The section name (`WEDGE_NIF` above) is free; the module finds its section by
+`DriverName = NDISWDG$`. Keep a backup of CONFIG.SYS and PROTOCOL.INI: a wrong binding takes the
+network down.
+
+## Parameters (DEVICE= line)
+Follows the common driver convention:
+
+| Option | Meaning |
+|---|---|
+| (none) | quiet: only errors are shown |
+| `/V` | verbose: banner, registered module and binding |
+| `/Q` | no messages at all (not even errors) |
+| `/W` | wait for a key after the messages |
+| `/AA` | audible alert (beep) when the driver is loaded |
+
+Every line starts with `NDISWDG: ` and long messages are word-wrapped at 79 columns with the prefix
+on each line. PROTOCOL.INI keywords: `DriverName` (required, `NDISWDG$`) and `Bindings` (required,
+the MAC to wrap; only the first name is used).
+
+## How it works
+See `doc\DESIGN.md`. Short version: `src\init.c` registers the module with the Protocol Manager at
+INIT; `src\ndis.c` answers InitiateBind (binds to the MAC) and Bind (accepts one protocol) and forwards
+every primitive in both directions, swapping only the module IDs and data selectors.
 
 ## Sample / test
-None yet.
+* `test\protocol.ini.sample` and `test\config.sys.sample` show the configuration.
+* `sample\wdgstat.c` (built to `bin\wdgstat.exe`) reads the module's status through the generic IOCTL
+  (category 0xA5, function 1): whether the MAC below and the protocol above are bound, the module IDs
+  and 13 traffic counters (each forwarded primitive in both directions, plus calls refused while not bound).
+  Run `wdgstat` after the network is up; counters rising means traffic goes through the wedge.
 
 ## Known issues
-* DOS target (`BUILDDOS`, old `WEDGEDOS.LNK`) is no longer built - OS/2 only.
-* Not run-tested (see Status).
+* Counters are plain 32-bit increments without locking; a count can be off by one under a race.
+* Static module only: dynamic bind/unbind (InitiatePrebind, InitiateUnbind, Unbind) answer INVALID_FUNCTION.
+* One protocol per wedge (like a MAC). The Protocol Manager's VECTOR handles several protocols on one MAC.
 
 ## Changelog
-* 1.06 (2026-11-13)  Open Watcom 2 build (wasm/wlink/wmake), restructured to the standard layout,
-  BSD 3-Clause license, BLDLEVEL signature, version raised from 1.05 to 1.06.
+* 2.00 (2026-11-13) First release of the new implementation, tested on the Dev VM.

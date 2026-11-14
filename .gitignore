@@ -4,3 +4,4 @@ bin/
 *.bak
 *.obj
 *.map
+tmp/

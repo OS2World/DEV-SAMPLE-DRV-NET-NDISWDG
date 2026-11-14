@@ -1,8 +1,8 @@
 @echo off
 rem ---------------------------------------------------------------------------
-rem  compile_wat.cmd - build the wedge driver with Open Watcom 2 (wmake + wasm + wlink)
+rem  compile_wat.cmd - build NDISWDG.OS2 with Open Watcom 2 (wmake, wcc, wasm, wlink)
 rem  Run from the project root:   compile_wat.cmd [clean]
-rem  Everything is logged to compile.log (appended). Result: bin\wedge.os2
+rem  Everything is logged to compile.log (appended). Result: bin\ndiswdg.os2
 rem ---------------------------------------------------------------------------
 if "%1"=="_LOGGED_" goto :run
 set PATH=C:\usr\bin;%PATH%
@@ -15,12 +15,12 @@ set PATH=C:\WATCOM\BINP;C:\WATCOM\BINW;%PATH%
 set INCLUDE=
 set EDPATH=C:\WATCOM\EDDAT
 echo.
-echo ===== wedge build started =====
+echo ===== ndiswdg build started =====
 if "%2"=="clean" goto :clean
 wmake -h -f Makefile.wat
 if errorlevel 1 goto :failed
-if not exist bin\wedge.os2 goto :failed
-dir bin\wedge.os2
+if not exist bin\ndiswdg.os2 goto :failed
+dir bin\ndiswdg.os2
 echo ===== BUILD OK =====
 goto :end
 
